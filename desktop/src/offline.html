@@ -18,16 +18,24 @@
       background: #6e02d9; color: #fff; font-weight: 600; cursor: pointer;
     }
     button:hover { background: #9333ea; }
+    .detail { font-size: 12px; color: #6b7280; word-break: break-all; }
   </style>
 </head>
 <body>
   <main>
     <h1>Can't reach Link Opener</h1>
     <p>Check your internet connection, then try again. Your saved links are safe.</p>
+    <p id="detail" class="detail"></p>
     <button id="retry" type="button">Retry</button>
   </main>
   <script>
     document.getElementById('retry').addEventListener('click', () => window.desktop?.retry())
+    // What failed — set as text, never as HTML.
+    const q = new URLSearchParams(location.search)
+    if (q.get('url')) {
+      const hint = q.get('error') === 'ERR_NAME_NOT_RESOLVED' ? ' — this address doesn’t exist (not published yet?)' : ''
+      document.getElementById('detail').textContent = `Tried ${q.get('url')} · ${q.get('error') || 'unknown error'}${hint}`
+    }
   </script>
 </body>
 </html>

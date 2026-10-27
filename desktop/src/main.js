@@ -52,10 +52,12 @@ function createWindow() {
     if (isWebUrl(url)) shell.openExternal(url)
   })
 
-  // Offline / server down → a local page with a Retry button.
-  win.webContents.on('did-fail-load', (_e, code, _desc, url, isMainFrame) => {
+  // Offline / server down → a local page with a Retry button, naming the
+  // address it tried and why it failed (e.g. ERR_NAME_NOT_RESOLVED = that
+  // domain doesn't exist yet).
+  win.webContents.on('did-fail-load', (_e, code, desc, url, isMainFrame) => {
     if (!isMainFrame || code === -3) return // -3 = aborted by a newer navigation
-    win.loadFile(path.join(__dirname, 'offline.html'), { query: { url: url || START_URL } })
+    win.loadFile(path.join(__dirname, 'offline.html'), { query: { url: url || START_URL, error: desc || String(code) } })
   })
 
   win.loadURL(START_URL)

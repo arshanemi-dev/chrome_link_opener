@@ -13,7 +13,10 @@ const PROFILE_LIST_ID = 'clo-chrome-profiles';
 // tools-5's header band.
 const HEAD = 'bg-[#1565C0] px-1 py-1 text-center font-medium text-white';
 const input =
-  'h-8 w-full min-w-[7rem] rounded-md border border-accent/60 bg-surface px-2.5 text-xs text-foreground placeholder:text-subtle focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent';
+  'h-8 w-full min-w-[5.5rem] rounded-md border border-accent/60 bg-surface px-2.5 text-xs text-foreground placeholder:text-subtle focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent';
+// The Type dropdown: half its cell's width (never too narrow for "Application"), centred.
+const select =
+  'mx-auto block h-8 w-1/2 min-w-[6.75rem] rounded-md border border-accent/60 bg-surface px-2 text-xs text-foreground focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent';
 
 // The inline Add / Edit row — one cell per column, in the table's own order.
 // Type picks URL or Application (only while adding: the two are priced apart,
@@ -47,7 +50,7 @@ function EditRow({ columns, draft, onChange, onSave, onCancel, saving, error, is
             onChange={(e) => onChange(withKind(draft, e.target.value))}
             disabled={!isNew}
             title={isNew ? 'URL opens in Chrome; Application opens a program, file or folder (desktop app)' : 'A saved row keeps its type'}
-            className={`${input} min-w-[7.5rem] cursor-pointer disabled:cursor-not-allowed disabled:opacity-60`}
+            className={`${select} cursor-pointer disabled:cursor-not-allowed disabled:opacity-60`}
           >
             <option value="url">{TYPE_LABEL.url}</option>
             <option value="app" disabled={!appsAllowed}>{TYPE_LABEL.app}{appsAllowed ? '' : ' (log in)'}</option>
@@ -62,7 +65,7 @@ function EditRow({ columns, draft, onChange, onSave, onCancel, saving, error, is
         );
       case 'link':
         return (
-          <div className="min-w-[16rem]">
+          <div className="min-w-[13rem]">
             {field('link', app ? 'C:\\Program Files\\App\\app.exe' : 'https://…', isNew)}
           </div>
         );
@@ -75,8 +78,10 @@ function EditRow({ columns, draft, onChange, onSave, onCancel, saving, error, is
     <>
       <tr data-active="true">
         <td className="px-3 py-2" />
-        {columns.map((c) => <td key={c.key} className="px-2 py-2">{cellFor(c.key)}</td>)}
-        <td className="px-2 py-2">
+        {/* The gap between neighbouring fields sits on an inner wrapper —
+            DataTable.module.css zeroes every cell's own side padding. */}
+        {columns.map((c) => <td key={c.key} className="py-2.5"><div className="px-2">{cellFor(c.key)}</div></td>)}
+        <td className="px-2 py-2.5">
           <div className="flex items-center justify-center gap-1.5">
             <button
               type="button"

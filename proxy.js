@@ -7,6 +7,7 @@ const SECRET = new TextEncoder().encode(process.env.JWT_SECRET)
 const PUBLIC_PATHS = ['/api/auth/login']
 // lib/auth.js's COOKIE_NAME / ADMIN_COOKIE.
 const SESSION_COOKIES = ['barmeto-token', 'admin-token']
+const IS_CONNECT = process.env.NEXT_PUBLIC_IS_CONNECT === 'true'
 
 const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || 'http://localhost:3001').split(',').map((o) => o.trim())
 
@@ -123,6 +124,19 @@ export async function proxy(req) {
     }
     const res = NextResponse.next()
     res.headers.set('x-pathname', pathname)
+    setCorsHeaders(res, origin)
+    return res
+  }
+
+  // Connected mode: /api/link-opener/* only forwards the caller's token to the
+  // admin panel (lib/linkOpener/hubProxy.js), and the admin panel — which
+  // issued it — is the one that checks it, as /api/auth/* already lets it do.
+  // Checking it here too, against this app's own JWT_SECRET, turned every
+  // login into an instant "please log in again" whenever that secret differed
+  // from the admin panel's (a local .env pointed at the live site). Nothing
+  // is served here without the admin panel accepting the token first.
+  if (isLinkOpenerApi && IS_CONNECT) {
+    const res = NextResponse.next()
     setCorsHeaders(res, origin)
     return res
   }

@@ -32,9 +32,10 @@ export default function ColumnHeaderCell({ col, sort, onSortChange, filter, onFi
   // whatever width the column ends up with (min-w, its values, or the
   // table stretched to full width) and wraps between words to fit, breaking
   // inside a word only when that one word is wider than the column.
+  // `col.fit`: no minimum — the column is as narrow as its label and controls.
   return (
-    <div className="flex min-w-36 items-center justify-center gap-1">
-      <span className="min-w-0 flex-1 text-center break-words [contain:inline-size]">{col.label}</span>
+    <div className={`flex items-center justify-center gap-1 ${col.fit ? 'px-1.5' : 'min-w-36'}`}>
+      <span className={col.fit ? 'whitespace-nowrap text-center' : 'min-w-0 flex-1 text-center break-words [contain:inline-size]'}>{col.label}</span>
       {col.sortable !== false && (
         <>
           <button

@@ -102,7 +102,7 @@ export function IconPicker({ draft, onChange }) {
         <button
           type="button"
           title="Choose an icon"
-          className="inline-flex h-8 shrink-0 items-center gap-1 rounded-md border border-accent/60 bg-surface px-1.5 hover:bg-card-hover"
+          className="inline-flex h-7 shrink-0 items-center gap-1 rounded-md border border-accent/60 bg-surface px-1.5 hover:bg-card-hover"
         >
           <LinkIcon link={draft} size={18} />
           <ChevronDown size={12} className="text-subtle" />

@@ -12,11 +12,14 @@ import { LinkIcon, IconPicker } from './LinkIcon';
 const PROFILE_LIST_ID = 'clo-chrome-profiles';
 // tools-5's header band.
 const HEAD = 'bg-[#1565C0] px-1 py-1 text-center font-medium text-white';
+// A `fit` column (Type): as narrow as its content — w-px lets the auto table
+// layout shrink it, nowrap stops that from wrapping the content instead.
+const fitCell = (col) => (col.fit ? 'w-px whitespace-nowrap' : '');
 const input =
-  'h-8 w-full min-w-[5.5rem] rounded-md border border-accent/60 bg-surface px-2.5 text-xs text-foreground placeholder:text-subtle focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent';
-// The Type dropdown: half its cell's width (never too narrow for "Application"), centred.
+  'h-7 w-full min-w-[5.5rem] rounded-md border border-accent/60 bg-surface px-2.5 text-xs text-foreground placeholder:text-subtle focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent';
+// The Type dropdown: as wide as its longest choice, centred.
 const select =
-  'mx-auto block h-8 w-1/2 min-w-[6.75rem] rounded-md border border-accent/60 bg-surface px-2 text-xs text-foreground focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent';
+  'mx-auto block h-7 w-auto rounded-md border border-accent/60 bg-surface px-2 text-xs text-foreground focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent';
 
 // The inline Add / Edit row — one cell per column, in the table's own order.
 // Type picks URL or Application (only while adding: the two are priced apart,
@@ -77,17 +80,17 @@ function EditRow({ columns, draft, onChange, onSave, onCancel, saving, error, is
   return (
     <>
       <tr data-active="true">
-        <td className="px-3 py-2" />
+        <td className="px-3 py-1.5" />
         {/* The gap between neighbouring fields sits on an inner wrapper —
             DataTable.module.css zeroes every cell's own side padding. */}
-        {columns.map((c) => <td key={c.key} className="py-2.5"><div className="px-2">{cellFor(c.key)}</div></td>)}
-        <td className="px-2 py-2.5">
+        {columns.map((c) => <td key={c.key} className={`py-1.5 ${fitCell(c)}`}><div className="px-2">{cellFor(c.key)}</div></td>)}
+        <td className="px-2 py-1.5">
           <div className="flex items-center justify-center gap-1.5">
             <button
               type="button"
               onClick={onSave}
               disabled={saving}
-              className="inline-flex h-8 items-center gap-1 whitespace-nowrap rounded-md bg-accent px-3 text-xs font-semibold text-white transition-colors hover:bg-accent-hover disabled:opacity-60"
+              className="inline-flex h-7 items-center gap-1 whitespace-nowrap rounded-md bg-accent px-3 text-xs font-semibold text-white transition-colors hover:bg-accent-hover disabled:opacity-60"
             >
               {saving && <Loader2 size={12} className="animate-spin" />}
               {cost > 0 ? `Save · ${coinsLabel(cost)}` : 'Save'}
@@ -96,7 +99,7 @@ function EditRow({ columns, draft, onChange, onSave, onCancel, saving, error, is
               type="button"
               onClick={onCancel}
               disabled={saving}
-              className="h-8 rounded-md border border-divider-light px-2.5 text-xs text-muted transition-colors hover:bg-card-hover"
+              className="h-7 rounded-md border border-divider-light px-2.5 text-xs text-muted transition-colors hover:bg-card-hover"
               aria-label="Cancel"
             >
               ✕
@@ -145,20 +148,20 @@ function ViewRow({ columns, link, selected, onToggle, onOpen, onEdit, onRenew, b
   };
   return (
     <tr data-selected={selected} className="transition-colors">
-      <td className="px-3 py-2.5">
+      <td className="px-3 py-1">
         <input type="checkbox" checked={selected} onChange={onToggle} className="accent-[var(--color-action)]" aria-label={`Select ${link.accountName || link.link}`} />
       </td>
       {columns.map((c) => (
-        <td key={c.key} className={`px-3 py-2.5 text-xs text-foreground ${link.expired ? 'opacity-70' : ''}`}>{cellFor(c.key)}</td>
+        <td key={c.key} className={`px-3 py-1 text-xs text-foreground ${fitCell(c)} ${link.expired ? 'opacity-70' : ''}`}>{cellFor(c.key)}</td>
       ))}
-      <td className="px-2 py-2">
+      <td className="px-2 py-1">
         <div className="flex items-center justify-center gap-1.5">
           {link.expired ? (
             <button
               type="button"
               onClick={onRenew}
               disabled={busy}
-              className="inline-flex h-8 items-center gap-1 rounded-md border border-accent px-2.5 text-xs font-semibold text-accent transition-colors hover:bg-accent/10 disabled:opacity-50"
+              className="inline-flex h-7 items-center gap-1 rounded-md border border-accent px-2.5 text-xs font-semibold text-accent transition-colors hover:bg-accent/10 disabled:opacity-50"
             >
               <RefreshCw size={12} /> Renew
             </button>
@@ -168,7 +171,7 @@ function ViewRow({ columns, link, selected, onToggle, onOpen, onEdit, onRenew, b
               onClick={onOpen}
               disabled={!canOpen}
               title={canOpen ? undefined : 'Open the Link Opener desktop app to launch applications'}
-              className="inline-flex h-8 items-center gap-1 rounded-md bg-accent px-2.5 text-xs font-semibold text-white transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-40"
+              className="inline-flex h-7 items-center gap-1 rounded-md bg-accent px-2.5 text-xs font-semibold text-white transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-40"
             >
               {app ? <><Play size={12} /> Launch</> : <><ExternalLink size={12} /> Open</>}
             </button>
@@ -179,7 +182,7 @@ function ViewRow({ columns, link, selected, onToggle, onOpen, onEdit, onRenew, b
             disabled={busy}
             aria-label="Edit"
             title="Edit"
-            className="flex h-8 w-8 items-center justify-center rounded-md border border-divider-light text-muted transition-colors hover:bg-card-hover hover:text-foreground disabled:opacity-50"
+            className="flex h-7 w-7 items-center justify-center rounded-md border border-divider-light text-muted transition-colors hover:bg-card-hover hover:text-foreground disabled:opacity-50"
           >
             <Pencil size={12} />
           </button>
@@ -254,7 +257,7 @@ export default function LinksTable({
                   />
                 </th>
                 {columns.map((col) => (
-                  <th key={col.key} className={HEAD}>
+                  <th key={col.key} className={`${HEAD} ${fitCell(col)}`}>
                     <ColumnHeaderCell
                       col={col}
                       sort={table.sort}

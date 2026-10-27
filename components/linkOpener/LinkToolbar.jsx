@@ -57,12 +57,12 @@ export default function LinkToolbar({
       <ToolButton icon={X} tone="danger" onClick={onRemove} disabled={!canRemove || busy} title="Remove the selected links">Remove</ToolButton>
       <ToolButton icon={Pencil} onClick={onEdit} disabled={!canEdit || busy} title="Select exactly one link to edit it">Edit</ToolButton>
       <Divider />
-      <ToolButton icon={Download} onClick={onBackup} disabled={!canBackup} title="Download your links as a backup file">Backup</ToolButton>
-      <ToolButton icon={Upload} onClick={() => fileRef.current?.click()} disabled={busy} title="Add links from a backup (.json) or .csv file">Restore</ToolButton>
+      <ToolButton icon={Download} onClick={onBackup} disabled={!canBackup} title="Download the links shown as an Excel sheet (.xlsx)">Backup</ToolButton>
+      <ToolButton icon={Upload} onClick={() => fileRef.current?.click()} disabled={busy} title="Add links from an Excel sheet (.xlsx) — a Backup file, or your own sheet with Link / Chrome Profile / Group / Account Name columns">Restore</ToolButton>
       <input
         ref={fileRef}
         type="file"
-        accept=".json,.csv,application/json,text/csv"
+        accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,.json,.csv"
         className="hidden"
         onChange={(e) => {
           const file = e.target.files?.[0];

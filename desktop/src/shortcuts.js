@@ -66,13 +66,13 @@ async function scanDesktopShortcuts() {
   return found.sort((a, b) => a.name.localeCompare(b.name))
 }
 
-// Launch a saved app: its shortcut (keeps the shortcut's arguments, working
-// folder and run-as settings), or — if that shortcut was deleted — its target.
-// Returns '' on success, else a message for the user.
+// Launch a saved app: its path — a scanned shortcut (keeps the shortcut's
+// arguments, working folder and run-as settings) or any program, file or
+// folder typed in — opened the way Explorer would. If a scanned shortcut was
+// deleted, its target instead. Returns '' on success, else a message.
 async function launchApp({ shortcutPath, targetPath }) {
   for (const file of [shortcutPath, targetPath]) {
     if (typeof file !== 'string' || !path.isAbsolute(file)) continue
-    if (!['.lnk', '.exe'].includes(path.extname(file).toLowerCase())) continue
     try {
       await fs.access(file)
     } catch {
@@ -81,7 +81,7 @@ async function launchApp({ shortcutPath, targetPath }) {
     const error = await shell.openPath(file)
     return error || ''
   }
-  return 'This app was not found on this computer — its shortcut may have been moved or deleted.'
+  return 'This path was not found on this computer — it may have been moved or deleted.'
 }
 
 module.exports = { scanDesktopShortcuts, launchApp }

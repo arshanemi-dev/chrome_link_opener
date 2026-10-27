@@ -5,8 +5,9 @@ import { ExternalLink, Pencil, RefreshCw, Link2, Plus, Loader2, Play } from 'luc
 import ColumnHeaderCell from '@/components/table/ColumnHeaderCell';
 import TablePager, { DEFAULT_PAGE_SIZE } from '@/components/table/TablePager';
 import styles from '@/components/table/DataTable.module.css';
-import { coinsLabel, isApp } from '@/lib/linkOpener/linkRules';
-import { AppIcon } from './ScanAppsModal';
+import { coinsLabel, isApp, withKind } from '@/lib/linkOpener/linkRules';
+import { TYPE_LABEL } from '@/lib/linkOpener/linkColumns';
+import { LinkIcon, IconPicker } from './LinkIcon';
 
 const PROFILE_LIST_ID = 'clo-chrome-profiles';
 // tools-5's header band.
@@ -14,15 +15,15 @@ const HEAD = 'bg-[#1565C0] px-1 py-1 text-center font-medium text-white';
 const input =
   'h-8 w-full min-w-[7rem] rounded-md border border-accent/60 bg-surface px-2.5 text-xs text-foreground placeholder:text-subtle focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent';
 
-function shortDate(iso) {
-  return new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
-}
-
 // The inline Add / Edit row — one cell per column, in the table's own order.
-// `cost` = coins this save charges (0 = free). A desktop app's shortcut path
-// isn't editable — only its name and group.
-function EditRow({ columns, draft, onChange, onSave, onCancel, saving, error, cost }) {
+// Type picks URL or Application (only while adding: the two are priced apart,
+// so a saved row keeps its type); Profile has the icon dropdown; Link / Path
+// takes a web address or a Windows path. `costFor(kind)` = coins a new row of
+// that kind charges (0 = free); `appsAllowed` = Application can be picked
+// (signed in — the browser store keeps web links only).
+function EditRow({ columns, draft, onChange, onSave, onCancel, saving, error, isNew, costFor, appsAllowed }) {
   const app = isApp(draft);
+  const cost = isNew ? costFor(draft.kind) : 0;
   const field = (key, placeholder, autoFocus, list) => (
     <input
       autoFocus={autoFocus}
@@ -39,17 +40,34 @@ function EditRow({ columns, draft, onChange, onSave, onCancel, saving, error, co
   );
   const cellFor = (key) => {
     switch (key) {
-      case 'type': return <span className="text-xs text-subtle">{app ? 'App' : 'Link'}</span>;
-      case 'profile': return app ? <span className="text-xs text-subtle">—</span> : field('chromeProfile', 'Default', false, PROFILE_LIST_ID);
+      case 'type':
+        return (
+          <select
+            value={draft.kind}
+            onChange={(e) => onChange(withKind(draft, e.target.value))}
+            disabled={!isNew}
+            title={isNew ? 'URL opens in Chrome; Application opens a program, file or folder (desktop app)' : 'A saved row keeps its type'}
+            className={`${input} min-w-[7.5rem] cursor-pointer disabled:cursor-not-allowed disabled:opacity-60`}
+          >
+            <option value="url">{TYPE_LABEL.url}</option>
+            <option value="app" disabled={!appsAllowed}>{TYPE_LABEL.app}{appsAllowed ? '' : ' (log in)'}</option>
+          </select>
+        );
+      case 'profile':
+        return (
+          <div className="flex items-center justify-center gap-1.5">
+            <IconPicker draft={draft} onChange={(icon) => onChange({ ...draft, icon })} />
+            {app ? <span className="px-2 text-xs text-subtle">—</span> : field('chromeProfile', 'Default', false, PROFILE_LIST_ID)}
+          </div>
+        );
       case 'link':
-        return app ? (
-          <span className="inline-flex max-w-[26rem] items-center gap-2 text-xs">
-            <AppIcon src={draft.icon} size={16} />
-            <span className="truncate font-mono text-subtle" title={draft.targetPath || draft.link}>{draft.targetPath || draft.link}</span>
-          </span>
-        ) : <div className="min-w-[16rem]">{field('link', 'https://…', true)}</div>;
+        return (
+          <div className="min-w-[16rem]">
+            {field('link', app ? 'C:\\Program Files\\App\\app.exe' : 'https://…', isNew)}
+          </div>
+        );
       case 'group': return field('groupName', 'Group');
-      case 'account': return field('accountName', app ? 'App name' : 'Account name', app);
+      case 'account': return field('accountName', app ? 'App name' : 'Account name', !isNew);
       default: return null;
     }
   };
@@ -98,15 +116,18 @@ function ViewRow({ columns, link, selected, onToggle, onOpen, onEdit, onRenew, b
     switch (key) {
       case 'type':
         return app
-          ? <span className="rounded bg-accent/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-accent">App</span>
-          : <span className="text-xs text-subtle">Link</span>;
-      case 'profile': return app ? <span className="text-subtle">—</span> : <span className="font-mono">{link.chromeProfile}</span>;
+          ? <span className="rounded bg-accent/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-accent">{TYPE_LABEL.app}</span>
+          : <span className="rounded bg-link/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-link">{TYPE_LABEL.url}</span>;
+      case 'profile':
+        return (
+          <span className="inline-flex items-center gap-2">
+            <LinkIcon link={link} size={20} />
+            {app ? <span className="text-subtle">—</span> : <span className="font-mono">{link.chromeProfile}</span>}
+          </span>
+        );
       case 'link':
         return app ? (
-          <span className="inline-flex max-w-[26rem] items-center gap-2">
-            <AppIcon src={link.icon} size={18} />
-            <span className="truncate font-mono text-muted" title={link.targetPath || link.link}>{link.targetPath || link.link}</span>
-          </span>
+          <span className="inline-block max-w-[26rem] truncate align-middle font-mono text-muted" title={link.link}>{link.link}</span>
         ) : (
           <a href={link.link} target="_blank" rel="noopener noreferrer" className="inline-block max-w-[26rem] truncate align-middle font-mono text-link hover:underline" title={link.link}>
             {link.link}
@@ -114,15 +135,6 @@ function ViewRow({ columns, link, selected, onToggle, onOpen, onEdit, onRenew, b
         );
       case 'group': return link.groupName || <span className="text-subtle">—</span>;
       case 'account': return link.accountName || <span className="text-subtle">—</span>;
-      case 'status':
-        return link.expired ? (
-          <span className="rounded bg-neg/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-neg">Expired</span>
-        ) : (
-          <span className="text-xs">
-            <span className="font-semibold text-pos">Active</span>
-            {link.paidUntil && <span className="block text-[10px] text-subtle">{link.autoRenew ? 'Renews' : 'Ends'} {shortDate(link.paidUntil)}</span>}
-          </span>
-        );
       default: return null;
     }
   };
@@ -180,7 +192,7 @@ function ViewRow({ columns, link, selected, onToggle, onOpen, onEdit, onRenew, b
 // the page so its own buttons act on the same rows.
 export default function LinksTable({
   columns, table, totalCount, selected, onToggle, onToggleMany, onOpen, onEdit, onRenew,
-  editing, draft, onDraftChange, onSave, onCancel, saving, editError, addCost,
+  editing, draft, onDraftChange, onSave, onCancel, saving, editError, costFor, appsAllowed,
   loading, onAdd, busy, desktop, chromeProfiles = [],
 }) {
   const [filterOpen, setFilterOpen] = useState(false); // a filter menu is open — make room for it
@@ -256,12 +268,12 @@ export default function LinksTable({
             </thead>
             <tbody>
               {editing === 'new' && (
-                <EditRow columns={columns} draft={draft} onChange={onDraftChange} onSave={onSave} onCancel={onCancel} saving={saving} error={editError} cost={addCost} />
+                <EditRow isNew columns={columns} draft={draft} onChange={onDraftChange} onSave={onSave} onCancel={onCancel} saving={saving} error={editError} costFor={costFor} appsAllowed={appsAllowed} />
               )}
 
               {pageRows.map((link) =>
                 editing === link.id ? (
-                  <EditRow key={link.id} columns={columns} draft={draft} onChange={onDraftChange} onSave={onSave} onCancel={onCancel} saving={saving} error={editError} cost={0} />
+                  <EditRow key={link.id} columns={columns} draft={draft} onChange={onDraftChange} onSave={onSave} onCancel={onCancel} saving={saving} error={editError} costFor={costFor} appsAllowed={appsAllowed} />
                 ) : (
                   <ViewRow
                     key={link.id}

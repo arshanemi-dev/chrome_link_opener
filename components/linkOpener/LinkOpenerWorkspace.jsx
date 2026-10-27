@@ -75,7 +75,7 @@ export default function LinkOpenerWorkspace({ user }) {
   // and filters (useTableView — same as tools-5) work on what's left, and
   // `table.view` is exactly the rows shown — what All / Backup act on.
   const searched = links.filter((l) => matchesSearch(l, search));
-  const columns = linkColumns({ account: isAccount, hasApps: links.some(isApp) });
+  const columns = linkColumns();
   const table = useTableView(searched, columns, cellOf);
   const visible = table.view;
   const expiredCount = links.filter((l) => l.expired).length;
@@ -107,7 +107,9 @@ export default function LinkOpenerWorkspace({ user }) {
     setEditing(link.id);
     setDraft({
       kind: link.kind ?? 'url', chromeProfile: link.chromeProfile, link: link.link,
-      groupName: link.groupName ?? '', accountName: link.accountName ?? '', targetPath: link.targetPath, icon: link.icon,
+      groupName: link.groupName ?? '', accountName: link.accountName ?? '', targetPath: link.targetPath, icon: link.icon ?? '',
+      // A scanned app's own icon stays pickable in the icon dropdown after another is chosen.
+      scanIcon: link.icon?.startsWith('data:') ? link.icon : null,
     });
     setEditError('');
   }
@@ -289,7 +291,7 @@ export default function LinkOpenerWorkspace({ user }) {
         onAdd={startAdd}
         onRemove={() => setConfirmRemove(true)}
         onEdit={() => selectedLinks.length === 1 && startEdit(selectedLinks[0])}
-        onBackup={() => downloadBackup(visible)}
+        onBackup={() => downloadBackup(visible).catch(() => addToast('Could not create the Excel backup.', 'error'))}
         onRestoreFile={restoreFile}
         canRemove={selectedLinks.length > 0}
         canEdit={selectedLinks.length === 1}
@@ -407,7 +409,8 @@ export default function LinkOpenerWorkspace({ user }) {
         onCancel={cancelEdit}
         saving={busy}
         editError={editError}
-        addCost={unitCost}
+        costFor={(kind) => (kind === 'app' ? appCost : unitCost)}
+        appsAllowed={isAccount}
         loading={store.loading}
         onAdd={startAdd}
         busy={busy}

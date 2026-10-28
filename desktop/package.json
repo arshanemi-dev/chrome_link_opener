@@ -1,7 +1,7 @@
 {
   "name": "barmeto-link-opener-desktop",
   "productName": "Barmeto Link Opener",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Windows desktop app for the Chrome Link Opener tool — opens links in their Chrome profile and launches saved desktop applications.",
   "author": "Barmeto",
   "private": true,

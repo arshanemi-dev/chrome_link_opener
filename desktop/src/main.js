@@ -1,5 +1,8 @@
+const fs = require('node:fs')
 const path = require('node:path')
-const { app, BrowserWindow, ipcMain, shell, Menu } = require('electron')
+const { Readable } = require('node:stream')
+const { pipeline } = require('node:stream/promises')
+const { app, BrowserWindow, ipcMain, shell, Menu, net } = require('electron')
 const { APP_ORIGIN, START_URL } = require('./config')
 const { scanDesktopShortcuts, launchApp } = require('./shortcuts')
 const { listChromeProfiles, openUrls } = require('./chrome')
@@ -36,6 +39,9 @@ function createWindow() {
       contextIsolation: true,
       sandbox: true,
       nodeIntegration: false,
+      // Read by the preload as `window.desktop.version` — the web app compares
+      // it with the live release and forces an update when they differ.
+      additionalArguments: [`--app-version=${app.getVersion()}`],
     },
   })
 
@@ -76,6 +82,35 @@ handle('desktop:scan-shortcuts', () => scanDesktopShortcuts())
 handle('desktop:launch-app', (target) => launchApp(target ?? {}))
 handle('desktop:open-urls', (items) => openUrls(items))
 handle('desktop:chrome-profiles', () => listChromeProfiles())
+handle('desktop:install-update', (url) => installUpdate(url))
+
+// The web app's compulsory update: download the live installer to %TEMP%,
+// start it, and quit so it can replace this copy. → '' when started, else a
+// message for the popup.
+async function installUpdate(url) {
+  let parsed
+  try {
+    parsed = new URL(url)
+  } catch {
+    return 'Invalid update link'
+  }
+  const name = path.basename(decodeURIComponent(parsed.pathname)).replace(/[^\w.-]/g, '_')
+  if (parsed.protocol !== 'https:' || !/\.(exe|msi)$/i.test(name)) return 'The update is not a Windows installer'
+
+  const file = path.join(app.getPath('temp'), name)
+  try {
+    const res = await net.fetch(url)
+    if (!res.ok || !res.body) return `Download failed (HTTP ${res.status})`
+    await pipeline(Readable.fromWeb(res.body), fs.createWriteStream(file))
+  } catch (err) {
+    return `Download failed: ${err.message}`
+  }
+  const error = await shell.openPath(file)
+  if (error) return error
+  setTimeout(() => app.quit(), 500)
+  return ''
+}
+
 // offline.html's Retry — reloads the app, nothing else.
 ipcMain.on('desktop:retry', () => win?.loadURL(START_URL))
 

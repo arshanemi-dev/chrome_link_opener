@@ -8,6 +8,7 @@ import { ToastProvider } from '@/components/admin/Toast'
 import DashboardTopbar from '@/components/dashboard/DashboardTopbar'
 import BottomMenu from '@/components/dashboard/BottomMenu'
 import ProfileContent from '@/components/profile/ProfileContent'
+import { useEmbedded } from '@/lib/linkOpener/desktop'
 
 const HEADER_HIDDEN = process.env.NEXT_PUBLIC_IS_Header_Hide === 'true'
 const BOTTOM_MENU_SHOWN = process.env.NEXT_PUBLIC_SHOW_FLOATING_MENU === 'true'
@@ -23,6 +24,8 @@ export default function ProfilePage() {
   const user = useStoredUser()
   const signedOut = user === null && !isLoggedIn()
   const [loggingOut, setLoggingOut] = useState(false)
+  // Inside another site's iframe that site's own navigation is used instead.
+  const embedded = useEmbedded()
 
   useEffect(() => {
     if (signedOut) router.replace('/login')
@@ -46,7 +49,7 @@ export default function ProfilePage() {
 
   return (
     <div className="min-h-screen bg-background">
-      {!HEADER_HIDDEN && <DashboardTopbar user={user} onLogout={handleLogout} loggingOut={loggingOut} />}
+      {!HEADER_HIDDEN && !embedded && <DashboardTopbar user={user} onLogout={handleLogout} loggingOut={loggingOut} />}
       {BOTTOM_MENU_SHOWN && <BottomMenu user={user} />}
       <main>
         <div className="max-w-5xl mx-auto px-5 sm:px-8 py-10">

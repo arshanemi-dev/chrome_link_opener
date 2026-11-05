@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { Download, RefreshCw } from 'lucide-react';
-import { useLiveRelease, formatSize } from '@/lib/linkOpener/desktop';
+import { useLiveRelease, formatSize, trackDownload } from '@/lib/linkOpener/desktop';
 
 // Desktop app only. When the admin panel's live version (Settings → Desktop
 // App Releases) isn't the version this app is running, the whole tool is
@@ -19,6 +19,8 @@ export default function ForceUpdateModal({ desktop }) {
   async function handleUpdate() {
     setError('');
     setState('working');
+    // Counted as an in-app update (Settings → Desktop App Releases → Downloads).
+    trackDownload(release.version, 'update');
     // New builds download and launch the installer themselves (then quit);
     // older ones only have the window-open handler, which hands the link to
     // the default browser to download.

@@ -8,10 +8,10 @@ import styles from '@/components/table/DataTable.module.css';
 import { coinsLabel, isApp, withKind } from '@/lib/linkOpener/linkRules';
 import { TYPE_LABEL } from '@/lib/linkOpener/linkColumns';
 import { LinkIcon, IconPicker } from './LinkIcon';
+import ProfileCombo from './ProfileCombo';
 
-const PROFILE_LIST_ID = 'clo-chrome-profiles';
 // tools-5's header band.
-const HEAD = 'bg-[#1565C0] px-1 py-1 text-center font-medium text-white';
+const HEAD = 'group/cell bg-[#1565C0] px-1 py-1 text-center font-medium text-white';
 // A `fit` column (Type): as narrow as its content — w-px lets the auto table
 // layout shrink it, nowrap stops that from wrapping the content instead.
 const fitCell = (col) => (col.fit ? 'w-px whitespace-nowrap' : '');
@@ -26,14 +26,14 @@ const select =
 // so a saved row keeps its type); Profile has the icon dropdown; Link / Path
 // takes a web address or a Windows path. `costFor(kind)` = coins a new row of
 // that kind charges (0 = free); `appsAllowed` = Application can be picked
-// (signed in — the browser store keeps web links only).
-function EditRow({ columns, draft, onChange, onSave, onCancel, saving, error, isNew, costFor, appsAllowed }) {
+// (signed in — the browser store keeps web links only). `profileOptions` =
+// the Chrome Profile dropdown's choices, with each one's account count.
+function EditRow({ columns, draft, onChange, onSave, onCancel, saving, error, isNew, costFor, appsAllowed, profileOptions }) {
   const app = isApp(draft);
   const cost = isNew ? costFor(draft.kind) : 0;
-  const field = (key, placeholder, autoFocus, list) => (
+  const field = (key, placeholder, autoFocus) => (
     <input
       autoFocus={autoFocus}
-      list={list}
       value={draft[key] ?? ''}
       onChange={(e) => onChange({ ...draft, [key]: e.target.value })}
       onKeyDown={(e) => {
@@ -63,7 +63,17 @@ function EditRow({ columns, draft, onChange, onSave, onCancel, saving, error, is
         return (
           <div className="flex items-center justify-center gap-1.5">
             <IconPicker draft={draft} onChange={(icon) => onChange({ ...draft, icon })} />
-            {app ? <span className="px-2 text-xs text-subtle">—</span> : field('chromeProfile', 'Default', false, PROFILE_LIST_ID)}
+            {app ? <span className="px-2 text-xs text-subtle">—</span> : (
+              <ProfileCombo
+                value={draft.chromeProfile ?? ''}
+                onChange={(chromeProfile) => onChange({ ...draft, chromeProfile })}
+                options={profileOptions}
+                onEnter={onSave}
+                onEscape={onCancel}
+                placeholder="Select or type…"
+                className={input}
+              />
+            )}
           </div>
         );
       case 'link':
@@ -201,7 +211,7 @@ function ViewRow({ columns, link, selected, onToggle, onOpen, onEdit, onRenew, b
 export default function LinksTable({
   columns, table, totalCount, selected, onToggle, onToggleMany, onOpen, onEdit, onRenew,
   editing, draft, onDraftChange, onSave, onCancel, saving, editError, costFor, appsAllowed,
-  loading, onAdd, busy, desktop, chromeProfiles = [],
+  loading, onAdd, busy, desktop, profileOptions = [],
 }) {
   const [filterOpen, setFilterOpen] = useState(false); // a filter menu is open — make room for it
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
@@ -239,11 +249,6 @@ export default function LinksTable({
         )}
 
         <div data-table-scroll className={`h-0 grow overflow-auto ${filterOpen ? 'min-h-[30rem]' : ''}`}>
-          {/* Chrome profiles on this computer (desktop app only) — suggestions for the profile input */}
-          <datalist id={PROFILE_LIST_ID}>
-            {chromeProfiles.map((p) => <option key={p.dir} value={p.dir}>{p.name}</option>)}
-          </datalist>
-
           <table className={`${styles.table} text-sm`}>
             <thead className="sticky top-0 z-10">
               <tr className="border-b border-divider">
@@ -276,12 +281,12 @@ export default function LinksTable({
             </thead>
             <tbody>
               {editing === 'new' && (
-                <EditRow isNew columns={columns} draft={draft} onChange={onDraftChange} onSave={onSave} onCancel={onCancel} saving={saving} error={editError} costFor={costFor} appsAllowed={appsAllowed} />
+                <EditRow isNew columns={columns} draft={draft} onChange={onDraftChange} onSave={onSave} onCancel={onCancel} saving={saving} error={editError} costFor={costFor} appsAllowed={appsAllowed} profileOptions={profileOptions} />
               )}
 
               {pageRows.map((link) =>
                 editing === link.id ? (
-                  <EditRow key={link.id} columns={columns} draft={draft} onChange={onDraftChange} onSave={onSave} onCancel={onCancel} saving={saving} error={editError} costFor={costFor} appsAllowed={appsAllowed} />
+                  <EditRow key={link.id} columns={columns} draft={draft} onChange={onDraftChange} onSave={onSave} onCancel={onCancel} saving={saving} error={editError} costFor={costFor} appsAllowed={appsAllowed} profileOptions={profileOptions} />
                 ) : (
                   <ViewRow
                     key={link.id}

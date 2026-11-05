@@ -1,7 +1,8 @@
 'use client';
 
-import { Download, MonitorDown, Globe, FolderTree, MousePointerClick, AppWindow, ShieldCheck } from 'lucide-react';
-import { useLiveRelease, formatSize } from '@/lib/linkOpener/desktop';
+import { useState } from 'react';
+import { Download, MonitorDown, Globe, FolderTree, MousePointerClick, AppWindow, ShieldCheck, Users } from 'lucide-react';
+import { useLiveRelease, formatSize, formatCount, trackDownload } from '@/lib/linkOpener/desktop';
 
 const FEATURES = [
   { icon: Globe, title: 'Right Chrome profile, every time', text: 'Each link opens in the Chrome profile it belongs to — no more logging in and out of seller accounts.' },
@@ -14,8 +15,19 @@ const FEATURES = [
 // the Windows desktop app (it needs to reach Chrome profiles and installed
 // apps), so the page describes it and offers the live installer — the one
 // the admin panel marked live in Settings → Desktop App Releases.
+// The button shows how many times the app has been downloaded; a click counts
+// (+1 straight away, then the admin panel's real total).
 export default function DesktopDownloadPage() {
   const release = useLiveRelease();
+  const [downloads, setDownloads] = useState(null); // after a click; else release.downloads
+  const [clicks, setClicks] = useState(0); // replays the +1 pop
+  const total = downloads ?? release?.downloads ?? 0;
+
+  function handleDownload() {
+    setDownloads(total + 1);
+    setClicks((n) => n + 1);
+    trackDownload(release.version, 'web').then((n) => n !== null && setDownloads(n));
+  }
 
   return (
     <div className="min-h-0 flex-1 overflow-y-auto">
@@ -37,10 +49,24 @@ export default function DesktopDownloadPage() {
               <a
                 href={release.url}
                 download={release.fileName}
-                className="flex h-11 items-center gap-2 rounded-xl bg-accent px-6 text-sm font-semibold text-white transition-colors hover:bg-accent-hover"
+                onClick={handleDownload}
+                className="group flex h-12 items-center overflow-hidden rounded-xl bg-accent text-sm font-semibold text-white shadow-lg shadow-accent/25 transition-all hover:bg-accent-hover active:scale-[0.98]"
               >
-                <Download size={18} /> Download for Windows
+                <span className="flex items-center gap-2 px-5">
+                  <Download size={18} className="transition-transform group-hover:translate-y-0.5" /> Download for Windows
+                </span>
+                {total > 0 && (
+                  <span className="flex h-full items-center gap-1.5 border-l border-white/20 bg-black/10 px-4 tabular-nums" title={`${total.toLocaleString('en-IN')} downloads`}>
+                    <span key={clicks} className={clicks ? 'pin-pop inline-block' : 'inline-block'}>{formatCount(total)}</span>
+                  </span>
+                )}
               </a>
+              {total > 0 && (
+                <p className="flex items-center gap-1.5 text-xs font-medium text-muted">
+                  <Users size={13} className="text-accent" />
+                  {total.toLocaleString('en-IN')} {total === 1 ? 'download' : 'downloads'} so far
+                </p>
+              )}
               <p className="text-xs text-subtle">
                 Version {release.version}
                 {release.size ? ` · ${formatSize(release.size)}` : ''}

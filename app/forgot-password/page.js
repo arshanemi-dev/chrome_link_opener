@@ -25,7 +25,7 @@ export default function ForgotPasswordPage() {
     intervalRef.current = setInterval(() => setTimer((t) => t - 1), 1000)
     return () => clearInterval(intervalRef.current)
   }, [timer])
-
+ 
   async function sendOTP() {
     setError('')
     if (!identifier.trim()) { setError('Please enter your ' + (method === 'email' ? 'email address' : 'mobile number')); return }

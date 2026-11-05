@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Play, CloudUpload, AlertTriangle, X } from 'lucide-react';
 import { useToast } from '@/components/admin/Toast';
 import ConfirmDialog from '@/components/admin/ConfirmDialog';
@@ -20,6 +20,8 @@ import LinksTable from './LinksTable';
 import ScanAppsModal from './ScanAppsModal';
 
 const NOTICE_MS = 5000;
+// Session flag: the after-login Desktop scan already ran for this user.
+const AUTO_SCAN_KEY = 'clo-auto-scan';
 
 // The page: toolbar → info notice → table (tools-5 style: sort + filter in
 // every header) → selection footer.
@@ -55,7 +57,8 @@ export default function LinkOpenerWorkspace({ user }) {
   const noticeReady = mode !== 'loading' && !store.loading;
   const showNotice = noticeReady && noticeClosedFor !== mode;
   const [scanning, setScanning] = useState(false);
-  const [scan, setScan] = useState(null); // { id, found: [{ name, shortcutPath, targetPath, icon, saved }] }
+  const [scan, setScan] = useState(null); // { id, auto, found: [{ name, shortcutPath, targetPath, icon, saved }] }
+  const autoScanned = useRef(false);
   const [chromeProfiles, setChromeProfiles] = useState([]);
 
   useEffect(() => {
@@ -79,6 +82,20 @@ export default function LinkOpenerWorkspace({ user }) {
   const table = useTableView(searched, columns, cellOf);
   const visible = table.view;
   const expiredCount = links.filter((l) => l.expired).length;
+
+  // The Chrome Profile dropdown: this computer's profiles (desktop app) plus
+  // every profile already in the list, each with how many accounts use it.
+  const profileOptions = (() => {
+    const byKey = new Map();
+    const entry = (value, name) => {
+      const key = value.toLowerCase();
+      if (!byKey.has(key)) byKey.set(key, { value, name: name || value, count: 0 });
+      return byKey.get(key);
+    };
+    for (const p of chromeProfiles) if (p?.dir) entry(p.dir, p.name);
+    for (const l of links) if (!isApp(l) && l.chromeProfile) entry(l.chromeProfile).count += 1;
+    return [...byKey.values()].sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+  })();
 
   // Selection survives filtering, but only links that still exist count.
   const selectedLinks = links.filter((l) => selected.has(l.id));
@@ -180,7 +197,10 @@ export default function LinkOpenerWorkspace({ user }) {
   }
 
   // ── scan Desktop applications (desktop app, signed in) ─────────────────────
-  async function runScan() {
+  // `auto` = the scan that runs by itself after login: it only speaks up when
+  // there are shortcuts not saved yet, and nothing is saved until the user
+  // picks them and presses Add.
+  async function runScan(auto = false) {
     setScanning(true);
     try {
       const found = await desktop.scanShortcuts();
@@ -188,15 +208,14 @@ export default function LinkOpenerWorkspace({ user }) {
       const savedPaths = new Set(
         links.filter(isApp).flatMap((l) => [l.link, l.targetPath]).filter(Boolean).map((p) => p.toLowerCase()),
       );
-      setScan({
-        id: Date.now(),
-        found: (found ?? []).map((s) => ({
-          ...s,
-          saved: savedPaths.has(s.shortcutPath.toLowerCase()) || (!!s.targetPath && savedPaths.has(s.targetPath.toLowerCase())),
-        })),
-      });
+      const marked = (found ?? []).map((s) => ({
+        ...s,
+        saved: savedPaths.has(s.shortcutPath.toLowerCase()) || (!!s.targetPath && savedPaths.has(s.targetPath.toLowerCase())),
+      }));
+      if (auto && !marked.some((s) => !s.saved)) return;
+      setScan({ id: Date.now(), auto, found: marked });
     } catch {
-      addToast('Could not scan the Desktop.', 'error');
+      if (!auto) addToast('Could not scan the Desktop.', 'error');
     } finally {
       setScanning(false);
     }
@@ -217,6 +236,19 @@ export default function LinkOpenerWorkspace({ user }) {
       setBusy(false);
     }
   }
+
+  // Once signed in (desktop app), the Desktop is scanned once per session and
+  // any new shortcuts are offered in the Desktop Applications dialog.
+  useEffect(() => {
+    if (!canScan || store.loading || autoScanned.current) return;
+    autoScanned.current = true;
+    const key = `${AUTO_SCAN_KEY}:${user?.id ?? user?._id ?? user?.email ?? ''}`;
+    try {
+      if (sessionStorage.getItem(key)) return;
+      sessionStorage.setItem(key, '1');
+    } catch {}
+    queueMicrotask(() => runScan(true)); // outside the effect body — runScan sets state
+  }, [canScan, store.loading]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── backup / restore ───────────────────────────────────────────────────────
   async function restoreFile(file) {
@@ -298,7 +330,7 @@ export default function LinkOpenerWorkspace({ user }) {
         canBackup={visible.length > 0}
         busy={busy || mode === 'loading'}
         wallet={wallet}
-        onScan={canScan ? runScan : undefined}
+        onScan={canScan ? () => runScan() : undefined}
         scanning={scanning}
         actions={(
           <>
@@ -415,7 +447,7 @@ export default function LinkOpenerWorkspace({ user }) {
         onAdd={startAdd}
         busy={busy}
         desktop={desktop}
-        chromeProfiles={chromeProfiles}
+        profileOptions={profileOptions}
       />
 
       {/* Modals */}

@@ -15,11 +15,12 @@ export function AppIcon({ src, size = 20 }) {
 // The result of "Scan Applications": every Desktop shortcut the desktop app
 // found. Ones already saved are shown but not selectable. The picked ones are
 // saved to the "Desktop Applications" group (`onAdd(shortcuts)`), charged
-// `coinsPerApp` each per month.
+// `coinsPerApp` each per month. The scan that runs by itself after login
+// (`scan.auto`) starts with nothing ticked — the user chooses what to save.
 export default function ScanAppsModal({ scan, onClose, onAdd, coinsPerApp, saving }) {
-  // Everything new starts ticked. The modal mounts once per scan, so this
-  // initial value is always for the current list.
-  const [picked, setPicked] = useState(() => new Set(scan?.found.filter((s) => !s.saved).map((s) => s.shortcutPath)));
+  // A manual scan starts with everything new ticked. The modal mounts once
+  // per scan, so this initial value is always for the current list.
+  const [picked, setPicked] = useState(() => new Set(scan?.auto ? [] : scan?.found.filter((s) => !s.saved).map((s) => s.shortcutPath)));
   if (!scan) return null;
 
   const fresh = scan.found.filter((s) => !s.saved);
@@ -59,6 +60,11 @@ export default function ScanAppsModal({ scan, onClose, onAdd, coinsPerApp, savin
         <p className="text-sm text-muted">No application shortcuts were found on your Desktop.</p>
       ) : (
         <>
+          {scan.auto && (
+            <p className="text-xs text-muted">
+              We found application shortcuts on your Desktop. Tick the ones you want to save to your list — nothing is saved until you press Add.
+            </p>
+          )}
           <div className="flex items-center justify-between text-xs text-muted">
             <span>
               Found <strong className="text-foreground">{scan.found.length}</strong> on your Desktop

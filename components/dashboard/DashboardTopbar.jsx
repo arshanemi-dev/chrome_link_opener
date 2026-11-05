@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
+import { LockKeyhole } from 'lucide-react';
 import UserMenu from './UserMenu';
 import { redirectToLogin } from '@/lib/authGate';
 
@@ -9,7 +10,8 @@ import { redirectToLogin } from '@/lib/authGate';
 // (Previously showed the full data/nav.js multi-tool link row.) `user` is
 // undefined until the browser has read the stored session (useStoredUser) —
 // an empty slot then, so neither "Log in" nor the menu flashes the wrong way.
-export default function DashboardTopbar({ user, onLogout }) {
+// `onLock` (desktop app, signed in) adds a "Lock" button for the PIN screen.
+export default function DashboardTopbar({ user, onLogout, onLock }) {
   return (
     <header className="sticky top-0 z-50 flex-shrink-0 border-b border-white/10 bg-footer">
       <div className="w-full px-4 sm:px-6 lg:px-10">
@@ -25,6 +27,17 @@ export default function DashboardTopbar({ user, onLogout }) {
           </nav>
 
           <div className="flex shrink-0 items-center gap-3">
+            {user && onLock && (
+              <button
+                type="button"
+                onClick={onLock}
+                title="Lock app (Ctrl+L)"
+                className="inline-flex h-9 items-center gap-1.5 rounded-full border border-white/15 px-3 text-xs font-semibold text-white/85 transition-colors hover:bg-white/10 hover:text-white"
+              >
+                <LockKeyhole size={15} />
+                <span className="hidden sm:inline">Lock</span>
+              </button>
+            )}
             {user === undefined ? (
               <span aria-hidden="true" className="block h-9 w-9" />
             ) : user ? (

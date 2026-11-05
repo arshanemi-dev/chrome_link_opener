@@ -8,6 +8,8 @@ import { useDesktop, useEmbedded, useHydrated } from '@/lib/linkOpener/desktop';
 import LinkOpenerWorkspace from './LinkOpenerWorkspace';
 import DesktopDownloadPage from './DesktopDownloadPage';
 import ForceUpdateModal from './ForceUpdateModal';
+import DesktopPinGate from './pin/DesktopPinGate';
+import { clearUnlocked, requestLock } from '@/lib/linkOpener/desktopPin';
 
 const HEADER_HIDDEN = process.env.NEXT_PUBLIC_IS_Header_Hide === 'true';
 
@@ -18,6 +20,9 @@ const HEADER_HIDDEN = process.env.NEXT_PUBLIC_IS_Header_Hide === 'true';
 // The tool itself only runs in the Windows desktop app (window.desktop); a
 // browser tab gets <DesktopDownloadPage/> instead. Inside another site's
 // iframe the topbar is never shown — that site has its own navigation.
+// Signed in inside the desktop app, the workspace sits behind a 6-digit PIN
+// (<DesktopPinGate/>): set up with a mobile OTP on first sign-in, reset with
+// a WhatsApp OTP.
 export default function LinkOpenerShell() {
   const hydrated = useHydrated();
   const desktop = useDesktop();
@@ -40,6 +45,7 @@ export default function LinkOpenerShell() {
     try {
       await fetch('/api/auth/logout', { method: 'POST' });
     } finally {
+      clearUnlocked();
       clearAuthTokens();
       window.location.href = '/link-opener';
     }
@@ -50,12 +56,22 @@ export default function LinkOpenerShell() {
 
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-surface">
-      {!HEADER_HIDDEN && !embedded && <DashboardTopbar user={user} onLogout={handleLogout} />}
+      {!HEADER_HIDDEN && !embedded && (
+        <DashboardTopbar user={user} onLogout={handleLogout} onLock={desktop && storedUser ? requestLock : undefined} />
+      )}
       {desktop ? (
         <>
-          <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-            <LinkOpenerWorkspace user={storedUser} />
-          </div>
+          {storedUser === undefined ? null : storedUser ? (
+            <DesktopPinGate key={storedUser.id} user={user} onLogout={handleLogout}>
+              <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+                <LinkOpenerWorkspace user={storedUser} />
+              </div>
+            </DesktopPinGate>
+          ) : (
+            <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+              <LinkOpenerWorkspace user={storedUser} />
+            </div>
+          )}
           <ForceUpdateModal desktop={desktop} />
         </>
       ) : (

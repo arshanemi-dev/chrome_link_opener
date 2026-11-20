@@ -18,6 +18,7 @@ import { downloadBackup, readBackupFile } from '@/lib/linkOpener/backup';
 import LinkToolbar, { ToolButton } from './LinkToolbar';
 import LinksTable from './LinksTable';
 import ScanAppsModal from './ScanAppsModal';
+import { track } from '@/lib/embedBridge';
 
 const NOTICE_MS = 5000;
 // Session flag: the after-login Desktop scan already ran for this user.
@@ -191,6 +192,8 @@ export default function LinkOpenerWorkspace({ user }) {
   async function open(list) {
     if (!list.length) return;
     const { blocked, appsSkipped, failed } = await openLinks(list, desktop);
+    track('tool_used', { feature: 'open_links', link_count: list.length, blocked_count: blocked || 0, apps_skipped: appsSkipped || 0, failed_count: failed?.length || 0 });
+    if (failed?.length) track('tool_error', { feature: 'open_links', error_message: String(failed[0]).slice(0, 200) });
     if (blocked) addToast(`Your browser blocked ${blocked} of ${list.length} tabs — allow pop-ups for this site to open them all at once.`, 'error');
     if (appsSkipped) addToast(`${appsSkipped} desktop app${appsSkipped === 1 ? '' : 's'} skipped — apps open from the Link Opener desktop app.`, 'error');
     for (const message of failed) addToast(message, 'error');

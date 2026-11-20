@@ -87,6 +87,16 @@ handle('desktop:install-update', (url) => installUpdate(url))
 // The web app's compulsory update: download the live installer to %TEMP%,
 // start it, and quit so it can replace this copy. → '' when started, else a
 // message for the popup.
+// Installers are only ever served from the hub's release storage (admin
+// panel lib/desktopReleases.js: Supabase Storage bucket "desktop-apps", or
+// Vercel Blob). Anything else is refused — otherwise a compromised page could
+// make this app download and run any .exe from anywhere.
+function isTrustedReleaseUrl(u) {
+  const host = u.hostname.toLowerCase()
+  if (host.endsWith('.public.blob.vercel-storage.com')) return true
+  return host.endsWith('.supabase.co') && u.pathname.startsWith('/storage/v1/object/public/desktop-apps/')
+}
+
 async function installUpdate(url) {
   let parsed
   try {
@@ -96,6 +106,7 @@ async function installUpdate(url) {
   }
   const name = path.basename(decodeURIComponent(parsed.pathname)).replace(/[^\w.-]/g, '_')
   if (parsed.protocol !== 'https:' || !/\.(exe|msi)$/i.test(name)) return 'The update is not a Windows installer'
+  if (!isTrustedReleaseUrl(parsed)) return 'The update link is not from the official release server'
 
   const file = path.join(app.getPath('temp'), name)
   try {
